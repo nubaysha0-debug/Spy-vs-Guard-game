@@ -127,7 +127,7 @@ def cell_char(game_state, pos):
 
 
 # ===============================================================
-# GUI & MAIN LOOP (Phase 3)
+# GUI & MAIN LOOP WITH ON-SCREEN CONTROLS
 # ===============================================================
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
@@ -149,6 +149,8 @@ COLOR_PANEL_BG = (30, 30, 40)
 COLOR_TEXT = (230, 230, 230)
 COLOR_WIN_TEXT = (60, 220, 90)
 COLOR_LOSE_TEXT = (240, 60, 60)
+COLOR_BTN = (70, 80, 110)
+COLOR_BTN_TEXT = (255, 255, 255)
 
 CHAR_TO_COLOR = {
     'S': COLOR_SPY,
@@ -164,6 +166,16 @@ KEY_TO_DIRECTION = {
     pygame.K_DOWN: 'DOWN',
     pygame.K_LEFT: 'LEFT',
     pygame.K_RIGHT: 'RIGHT',
+}
+
+# Define Touch Button Hitboxes on the Right Panel
+BUTTONS = {
+    'UP': pygame.Rect(PANEL_X + 75, 400, 50, 45),
+    'LEFT': pygame.Rect(PANEL_X + 20, 450, 50, 45),
+    'DOWN': pygame.Rect(PANEL_X + 75, 450, 50, 45),
+    'RIGHT': pygame.Rect(PANEL_X + 130, 450, 50, 45),
+    'TOGGLE_VIEW': pygame.Rect(PANEL_X + 20, 510, 75, 40),
+    'RESET': pygame.Rect(PANEL_X + 105, 510, 75, 40),
 }
 
 
@@ -192,31 +204,36 @@ def draw_panel(screen, game_state, admin_view, font, small_font):
   y = 15
 
   doc_text = 'YES' if game_state['has_document'] else 'not yet'
-  draw_text_line(screen, font, 'Document Collected:', x, y)
+  draw_text_line(screen, font, 'Document:', x, y)
   draw_text_line(screen, font, doc_text, x, y + 24)
 
-  y += 70
+  y += 60
   draw_text_line(screen, font, 'Turn Count: %d' % game_state['turn'], x, y)
 
   y += 45
   noise = game_state['last_noise_pos']
-  noise_text = 'none yet' if noise is None else '(%d, %d)' % noise
-  draw_text_line(screen, font, 'Last Noise Location:', x, y)
+  noise_text = 'none' if noise is None else '(%d, %d)' % noise
+  draw_text_line(screen, font, 'Last Noise:', x, y)
   draw_text_line(screen, font, noise_text, x, y + 24)
 
-  y += 70
-  view_text = 'ADMIN (see all)' if admin_view else 'SPY (fog on)'
+  y += 60
+  view_text = 'ADMIN' if admin_view else 'SPY (Fog)'
   draw_text_line(screen, font, 'View: ' + view_text, x, y)
 
-  y += 55
-  draw_text_line(screen, font, 'Controls Info:', x, y)
-  control_lines = [
-      'Arrows = sneak around',
-      'TAB = peek at admin map',
-      'R = restart, i messed up',
-  ]
-  for i, line in enumerate(control_lines):
-    draw_text_line(screen, small_font, line, x, y + 28 + i * 20)
+  # Draw Touch / Click Buttons
+  for btn_key, rect in BUTTONS.items():
+    pygame.draw.rect(screen, COLOR_BTN, rect, border_radius=6)
+    pygame.draw.rect(screen, (120, 130, 160), rect, 2, border_radius=6)
+
+    lbl = btn_key
+    if btn_key == 'TOGGLE_VIEW':
+      lbl = 'VIEW'
+    elif btn_key == 'RESET':
+      lbl = 'RESET'
+
+    txt = small_font.render(lbl, True, COLOR_BTN_TEXT)
+    txt_rect = txt.get_rect(center=rect.center)
+    screen.blit(txt, txt_rect)
 
 
 def draw_game_over(screen, game_state, big_font, small_font):
@@ -224,10 +241,10 @@ def draw_game_over(screen, game_state, big_font, small_font):
     return
 
   if game_state['status'] == 'won':
-    message = 'VICTORY! Escaped with Document'
+    message = 'VICTORY! Escaped!'
     color = COLOR_WIN_TEXT
   else:
-    message = 'BUSTED! Guard Caught You'
+    message = 'BUSTED!'
     color = COLOR_LOSE_TEXT
 
   banner = pygame.Rect(0, GRID_PIXELS // 2 - 60, GRID_PIXELS, 120)
@@ -240,7 +257,9 @@ def draw_game_over(screen, game_state, big_font, small_font):
   )
   screen.blit(text_surface, text_rect)
 
-  hint_surface = small_font.render('press R to try again', True, COLOR_TEXT)
+  hint_surface = small_font.render(
+      'press R or tap RESET to play again', True, COLOR_TEXT
+  )
   hint_rect = hint_surface.get_rect(
       center=(GRID_PIXELS // 2, GRID_PIXELS // 2 + 35)
   )
@@ -265,9 +284,9 @@ async def main():
   pygame.display.set_caption('Spy vs Guard')
   clock = pygame.time.Clock()
 
-  font = pygame.font.Font(None, 26)
-  small_font = pygame.font.Font(None, 22)
-  big_font = pygame.font.Font(None, 44)
+  font = pygame.font.Font(None, 24)
+  small_font = pygame.font.Font(None, 18)
+  big_font = pygame.font.Font(None, 40)
 
   game_state = make_game_state()
   admin_view = False
@@ -283,6 +302,22 @@ async def main():
         elif event.key == pygame.K_TAB:
           admin_view = not admin_view
         elif event.key == pygame.K_r:
+          game_state = make_game_state()
+
+      # Touch & Mouse Click Handling
+      elif event.type == pygame.MOUSEBUTTONDOWN:
+        pos = event.pos
+        if BUTTONS['UP'].collidepoint(pos):
+          handle_arrow_key(game_state, 'UP')
+        elif BUTTONS['DOWN'].collidepoint(pos):
+          handle_arrow_key(game_state, 'DOWN')
+        elif BUTTONS['LEFT'].collidepoint(pos):
+          handle_arrow_key(game_state, 'LEFT')
+        elif BUTTONS['RIGHT'].collidepoint(pos):
+          handle_arrow_key(game_state, 'RIGHT')
+        elif BUTTONS['TOGGLE_VIEW'].collidepoint(pos):
+          admin_view = not admin_view
+        elif BUTTONS['RESET'].collidepoint(pos):
           game_state = make_game_state()
 
     screen.fill(COLOR_PANEL_BG)
