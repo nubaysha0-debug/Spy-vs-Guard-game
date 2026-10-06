@@ -205,20 +205,15 @@ async def main():
         elif event.key == pygame.K_r:
           game_state = logic.make_game_state()  # fresh game, fresh start
 
-    # --- draw everything ---
-    screen.fill(COLOR_PANEL_BG)
-    draw_grid(screen, game_state, admin_view)
-    draw_panel(screen, game_state, admin_view, font, small_font)
-    draw_game_over(screen, game_state, big_font, small_font)
-
-    pygame.display.flip()
-    clock.tick(FPS)
-
-    # Yield control to the browser at the END of each frame
-    await asyncio.sleep(0)
-
+      # --- draw everything ---
+      screen.fill(COLOR_PANEL_BG)
+      draw_grid(screen, game_state, admin_view)
+      draw_panel(screen, game_state, admin_view, font, small_font)
+      draw_game_over(screen, game_state, big_font, small_font)
+      pygame.display.flip()
+      clock.tick(FPS)
+      await asyncio.sleep(0)
   pygame.quit()
-
 
 if __name__ == '__main__':
   asyncio.run(main())
