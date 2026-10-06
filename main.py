@@ -1,5 +1,6 @@
 import sys
 import pygame
+import asyncio
 
 # ---------------------------------------------------------------
 # Spy vs Guard, Phase 3: the pretty graphical version
@@ -167,7 +168,7 @@ def handle_arrow_key(game_state, direction):
 # main loop
 # ---------------------------------------------------------------
 
-def main():
+async def main():
     pygame.init()
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption("Spy vs Guard - Phase 3")
@@ -184,6 +185,7 @@ def main():
     running = True
     while running:
         # --- listen for events ---
+        await asyncio.sleep(0)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
