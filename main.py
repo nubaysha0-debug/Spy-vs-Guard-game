@@ -24,18 +24,46 @@ def is_valid_tile(grid, pos):
   return grid[r][c] != '#'
 
 
+from collections import deque
+
+
+def is_reachable(grid, start, goal):
+  """Uses BFS to check if a valid path exists between start and goal."""
+  queue = deque([start])
+  visited = {start}
+
+  while queue:
+    r, c = queue.popleft()
+    if (r, c) == goal:
+      return True
+
+    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+      nr, nc = r + dr, c + dc
+      if 0 <= nr < GRID_SIZE and 0 <= nc < GRID_SIZE:
+        if grid[nr][nc] != '#' and (nr, nc) not in visited:
+          visited.add((nr, nc))
+          queue.append((nr, nc))
+  return False
+
+
 def generate_map():
-  grid = [['.' for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
-  walls_placed = 0
+  """Generates a random map and guarantees the Document is reachable."""
   forbidden = {(0, 0), (GRID_SIZE - 1, GRID_SIZE - 1), (GRID_SIZE - 1, 0)}
 
-  while walls_placed < NUM_WALLS:
-    r = random.randint(0, GRID_SIZE - 1)
-    c = random.randint(0, GRID_SIZE - 1)
-    if (r, c) not in forbidden and grid[r][c] == '.':
-      grid[r][c] = '#'
-      walls_placed += 1
-  return grid
+  while True:
+    grid = [['.' for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+    walls_placed = 0
+
+    while walls_placed < NUM_WALLS:
+      r = random.randint(0, GRID_SIZE - 1)
+      c = random.randint(0, GRID_SIZE - 1)
+      if (r, c) not in forbidden and grid[r][c] == '.':
+        grid[r][c] = '#'
+        walls_placed += 1
+
+    # Ensure Spy (0,0) can reach the Document (GRID_SIZE-1, 0)
+    if is_reachable(grid, (0, 0), (GRID_SIZE - 1, 0)):
+      return grid
 
 
 def make_game_state():
@@ -63,11 +91,9 @@ def move_entity(grid, current_pos, direction):
 def guard_step(game_state):
   grid = game_state['grid']
   guard = game_state['guard_pos']
+
+  # Always target the spy directly
   target = game_state['spy_pos']
-  if not in_spy_vision(
-      game_state, guard
-  ) and game_state['last_noise_pos'] is not None:
-    target = game_state['last_noise_pos']
 
   best_pos = guard
   best_dist = abs(guard[0] - target[0]) + abs(guard[1] - target[1])
@@ -80,7 +106,6 @@ def guard_step(game_state):
       best_pos = nxt
 
   game_state['guard_pos'] = best_pos
-
 
 def play_turn(game_state, direction):
   if game_state['status'] != 'playing':
